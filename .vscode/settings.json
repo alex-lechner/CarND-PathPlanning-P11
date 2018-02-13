@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "array": "cpp",
+        "alignedvector3": "cpp",
+        "cmath": "cpp",
+        "complex": "cpp",
+        "iostream": "cpp",
+        "ostream": "cpp"
+    }
+}

@@ -205,10 +205,10 @@ int main()
 
 	int lane = 1;
 	const double SPEED_LIMIT = 49.5;
-	double ref_vel = SPEED_LIMIT;
+	double ref_vel = 0;
 
 	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &ref_vel, &lane, &SPEED_LIMIT](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-																																																																					uWS::OpCode opCode) {
+																																			uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -269,8 +269,16 @@ int main()
 
 							if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
 							{
-								ref_vel = check_speed;
+								cout << "front car Speed: " << check_speed << endl;
+								cout << "v^2: " << pow(vx, 2) + pow(vy, 2) << endl;
+								cout << "my Speed: " << ref_vel << endl;
 								too_close = true;
+
+								// TODO: Adjust ref_vel so that it's the same speed as the car in front of us if we can't make a lane switch
+								if (ref_vel != check_speed*2)
+								{
+									ref_vel -= .3;
+								}
 
 								//cost function here
 								if (lane > 0)
@@ -278,13 +286,15 @@ int main()
 									lane = 0;
 								}
 							}
+
+
 						}
 					}
 
-					if (!too_close && ref_vel < SPEED_LIMIT)
-					{
-						ref_vel += .3;
-					}
+					// if (!too_close && ref_vel < SPEED_LIMIT)
+					// {
+					// 	ref_vel += .3;
+					// }
 
 					vector<double> next_x_vals, next_y_vals, ptsx, ptsy;
 					double ref_x = car_x, ref_y = car_y, ref_yaw = deg2rad(car_yaw);
@@ -337,7 +347,7 @@ int main()
 					tk::spline s;
 					s.set_points(ptsx, ptsy);
 
-					for (int i = 0; previous_path_x.size(); ++i)
+					for (int i = 0; i < previous_path_x.size(); ++i)
 					{
 						next_x_vals.push_back(previous_path_x[i]);
 						next_y_vals.push_back(previous_path_y[i]);
@@ -345,7 +355,7 @@ int main()
 
 					double target_x = 30.0, target_y = s(target_x), target_dist = sqrt(pow(target_x, 2) + pow(target_y, 2)), x_add_on = 0;
 
-					for (int i = 1; i <= 50-previous_path_x.size(); ++i)
+					for (int i = 1; i <= 50 - previous_path_x.size(); ++i)
 					{
 						double N = (target_dist / (.02 * ref_vel / 2.24));
 						double x_point = x_add_on + target_x / N;
@@ -388,7 +398,7 @@ int main()
 	// program
 	// doesn't compile :-(
 	h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data,
-										 size_t, size_t) {
+					   size_t, size_t) {
 		const std::string s = "<h1>Hello world!</h1>";
 		if (req.getUrl().valueLength == 1)
 		{
@@ -406,7 +416,7 @@ int main()
 	});
 
 	h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
-												 char *message, size_t length) {
+						   char *message, size_t length) {
 		ws.close();
 		std::cout << "Disconnected" << std::endl;
 	});
