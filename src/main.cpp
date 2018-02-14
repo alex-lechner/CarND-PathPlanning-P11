@@ -323,10 +323,12 @@ int main()
 						if (!left_lane_car && lane > 0)
 						{
 							--lane;
+							match_speed = false;
 						}
 						else if (!right_lane_car && lane < 2)
 						{
 							++lane;
+							match_speed = false;
 						}
 					}
 					else if (ref_vel < SPEED_LIMIT && !match_speed)
