@@ -208,7 +208,7 @@ int main()
 	double ref_vel = 0;
 
 	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &ref_vel, &lane, &SPEED_LIMIT](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-																																			uWS::OpCode opCode) {
+																																									 uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -254,47 +254,57 @@ int main()
 						car_s = end_path_s;
 					}
 
-					bool too_close = false;
+					bool too_close = false, left_lane_car = false, right_lane_car = false;
 
 					for (int i = 0; i < sensor_fusion.size(); ++i)
 					{
 						float d = sensor_fusion[i][6];
-						if (d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2))
+
+						double vx = sensor_fusion[i][3], vy = sensor_fusion[i][4];
+						double check_speed = sqrt(pow(vx, 2) + pow(vy, 2)), check_car_s = sensor_fusion[i][5];
+
+						check_car_s += ((double)prev_size * .02 * check_speed);
+
+						if (check_car_s - car_s < SPEED_LIMIT * .55)
 						{
-							double vx = sensor_fusion[i][3], vy = sensor_fusion[i][4];
-							double check_speed = sqrt(pow(vx, 2) + pow(vy, 2));
-							double check_car_s = sensor_fusion[i][5];
-
-							check_car_s += ((double)prev_size * .02 * check_speed);
-
-							if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
+							if (check_car_s > car_s && d < 2 + 4 * lane + 2 && d > 2 + 4 * lane - 2)
 							{
-								cout << "front car Speed: " << check_speed << endl;
-								cout << "v^2: " << pow(vx, 2) + pow(vy, 2) << endl;
-								cout << "my Speed: " << ref_vel << endl;
 								too_close = true;
-
-								// TODO: Adjust ref_vel so that it's the same speed as the car in front of us if we can't make a lane switch
-								if (ref_vel != check_speed*2)
+							}
+							// 0 = Left lane, 1 = Center lane, 2 = Right lane
+							if (check_car_s > car_s - 20)
+							{
+								if (d < 2 + 4 * lane - 2 && d > 2 + 4 * lane - 6)
 								{
-									ref_vel -= .3;
+									left_lane_car = true;
+									cout << "A Car is on the left lane!" << endl;
 								}
-
-								//cost function here
-								if (lane > 0)
+								if (d < 2 + 4 * lane + 6 && d > 2 + 4 * lane + 2)
 								{
-									lane = 0;
+									right_lane_car = true;
+									cout << "A Car is on the right lane!" << endl;
 								}
 							}
-
-
 						}
 					}
 
-					// if (!too_close && ref_vel < SPEED_LIMIT)
-					// {
-					// 	ref_vel += .3;
-					// }
+					if (too_close)
+					{
+						if (!left_lane_car && lane > 0)
+						{
+							--lane;
+						}
+						else if (!right_lane_car && lane < 2)
+						{
+							++lane;
+						}
+
+						ref_vel -= .2;
+					}
+					else if (ref_vel < SPEED_LIMIT)
+					{
+						ref_vel += .3;
+					}
 
 					vector<double> next_x_vals, next_y_vals, ptsx, ptsy;
 					double ref_x = car_x, ref_y = car_y, ref_yaw = deg2rad(car_yaw);
