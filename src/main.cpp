@@ -206,9 +206,10 @@ int main()
 	int lane = 1;
 	const double SPEED_LIMIT = 49.5;
 	double ref_vel = 0;
+	bool match_speed = false;
 
-	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &ref_vel, &lane, &SPEED_LIMIT](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-																																									 uWS::OpCode opCode) {
+	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &ref_vel, &lane, &SPEED_LIMIT, &match_speed](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+																																						  uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -265,30 +266,59 @@ int main()
 
 						check_car_s += ((double)prev_size * .02 * check_speed);
 
-						if (check_car_s - car_s < SPEED_LIMIT * .55)
+						// this is just for safety! In case the car is way ahead of us we don't get stuck in the matched speed
+						if (check_car_s - car_s > ref_vel && d < 2 + 4 * lane + 2 && d > 2 + 4 * lane - 2)
 						{
+							match_speed = false;
+						}
+
+						if (check_car_s - car_s < ref_vel * .55)
+						{
+							// 0 = Left lane, 1 = Center lane, 2 = Right lane
+							// lane 0: 0 < d < 4
+							// lane 1: 4 < d < 8
+							// lane 2: 8 < d < 12
 							if (check_car_s > car_s && d < 2 + 4 * lane + 2 && d > 2 + 4 * lane - 2)
 							{
 								too_close = true;
+								if (!match_speed)
+								{
+									if (ref_vel <= check_speed * 2.24)
+									{
+										ref_vel = check_speed * 2.24;
+										match_speed = true;
+									}
+									else
+									{
+										ref_vel -= .224;
+									}
+								}
+
+								// if we are to close to the car in front of us, break immediately
+								if (check_car_s - car_s <= ref_vel * .4)
+								{
+									ref_vel -= .29;
+									match_speed = false;
+								}
 							}
-							// 0 = Left lane, 1 = Center lane, 2 = Right lane
+
 							if (check_car_s > car_s - 20)
 							{
 								if (d < 2 + 4 * lane - 2 && d > 2 + 4 * lane - 6)
 								{
+									// car on the left lane
 									left_lane_car = true;
-									cout << "A Car is on the left lane!" << endl;
 								}
 								if (d < 2 + 4 * lane + 6 && d > 2 + 4 * lane + 2)
 								{
+									//car on the right lane
 									right_lane_car = true;
-									cout << "A Car is on the right lane!" << endl;
 								}
 							}
 						}
 					}
 
-					if (too_close)
+					if (too_close || match_speed)
 					{
 						if (!left_lane_car && lane > 0)
 						{
@@ -298,12 +328,10 @@ int main()
 						{
 							++lane;
 						}
-
-						ref_vel -= .2;
 					}
-					else if (ref_vel < SPEED_LIMIT)
+					else if (ref_vel < SPEED_LIMIT && !match_speed)
 					{
-						ref_vel += .3;
+						ref_vel += .224;
 					}
 
 					vector<double> next_x_vals, next_y_vals, ptsx, ptsy;

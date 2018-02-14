@@ -21,6 +21,7 @@ The goals / steps of this project are the following:
 [eigen lib]: http://eigen.tuxfamily.org/index.php?title=Main_Page
 [udacity code]: https://github.com/udacity/CarND-Path-Planning-Project
 [Path Planning Walkthrough]: https://www.youtube.com/watch?v=3QP3hJHm4WM
+[output video]: ./imgs/path-planning.gif "Path Planning Project Video"
 
 ---
 
@@ -63,12 +64,17 @@ Connected
 ```
 
 ### 3. Reflection
-For this project, I referred to the [Path Planning Walkthrough by David Silver and Aaron Brown][Path Planning Walkthrough]. However, I have implemented the cost function/lane change behavior on my own. By using the sensor fusion data we can detect the position of other vehicles around us. We are using this information to measure the distance of cars nearby. If we get too close to the car in front of us we decelerate the vehicle and try to pass it by changing lanes. Furthermore, we check if other vehicles are around us (on the left and right lane) in order to change lanes safely. 
-We only take measurements from vehicles heading in our direction of motion which also allows us to stay in our lanes and to not move beyond our lanes. If a car is on the left and/or right lane we set the `left_lane_car` and `right_lane_car` values on line 279 & 284  in `main.cpp` to `true` and prevent the vehicle from changing lanes if a car in front of us is driving slower than we do.
+For this project, I referred to the [Path Planning Walkthrough by David Silver and Aaron Brown][Path Planning Walkthrough]. However, I have implemented the cost function/lane change behavior on my own. We only take measurements from vehicles heading in our direction of motion which also allows us to stay in our lanes and to not move beyond our lanes. By using the sensor fusion data we can detect the position of other vehicles around us. We are using this information to measure the distance of cars nearby.
+If we get too close to the car in front of us we decelerate the vehicle and try to pass it by changing lanes. Furthermore, we check if other vehicles are around us (on the left and right lane) in order to change lanes safely. For instance, if a car on the left or right lane is 20 waypoints behind us we set the `left_lane_car` or `right_lane_car` values on line 310 & 315  in `main.cpp` to `true` and prevent the vehicle from changing lanes. If we can't perform a lane change at all and get "stuck" in slow traffic we adapt the speed of the vehicle in front of us for a smoother ride.
+Also, if a car in front of us hits the brake and gets too close to our car we also "hit the brake" (decelerate the vehicle by a larger number) in line 298 in `main.cpp`.
+
+### 4. Final Output:
+
+![final output][output video]
 
 ---
 
 ## Discussion
 
 ### 1. Briefly discuss any problems / issues you faced in your implementation of this project.
-The vehicle detection was kind of challenging. However, my main issue was that I have initialized the flag `right_lane_car` (line 257 in `main.cpp`) as `true` instead of `false` which always - of course - led my vehicle to change to the left lane even though there was no car on the right side. Therefore, I was always stuck in lane 0 (the very left lane).
+The vehicle detection was kind of challenging. However, my main issue was that I have initialized the flag `right_lane_car` (line 257 in `main.cpp`) as `true` instead of `false` which always - of course - led my vehicle to change to the left lane even though there was no car on the right side. Therefore, I was always stuck in lane 0 (the very left lane). Also, I had trouble to match the speed of the vehicle in front of me because `check_speed` did not reflect the actual speed of the vehicle in front me.
